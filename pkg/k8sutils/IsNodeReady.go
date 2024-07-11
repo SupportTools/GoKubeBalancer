@@ -13,7 +13,7 @@ import (
 // IsNodeReady checks if the node is in a ready state.
 func IsNodeReady(ctx context.Context, clientset *kubernetes.Clientset, nodeName string) (bool, error) {
 	if config.CFG.Debug {
-		logger.Printf("Checking readiness for node %s", nodeName)
+		log.Debugf("Checking readiness for node %s", nodeName)
 	}
 
 	// Get the current status of the node from Kubernetes
@@ -25,19 +25,19 @@ func IsNodeReady(ctx context.Context, clientset *kubernetes.Clientset, nodeName 
 	for _, condition := range node.Status.Conditions {
 		// Log each condition found in the node status
 		if config.CFG.Debug {
-			logger.Printf("Node %s condition type: %s, status: %s", nodeName, condition.Type, condition.Status)
+			log.Debugf("Node %s condition type: %s, status: %s", nodeName, condition.Type, condition.Status)
 		}
 
 		if condition.Type == v1.NodeReady && condition.Status == v1.ConditionTrue {
 			// Log the positive readiness condition
-			logger.Printf("Node %s is ready.", nodeName)
+			log.Debugf("Node %s is ready.", nodeName)
 			return true, nil
 		}
 	}
 
 	// Log the negative outcome if no ready condition is met
 	if config.CFG.Debug {
-		logger.Printf("Node %s is not ready. Conditions: %v", nodeName, node.Status.Conditions)
+		log.Debugf("Node %s is not ready. Conditions: %v", nodeName, node.Status.Conditions)
 	}
 	return false, nil
 }

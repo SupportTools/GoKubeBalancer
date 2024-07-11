@@ -22,7 +22,10 @@ func SetupLogging() *logrus.Logger {
 	customFormatter.FullTimestamp = true
 	customFormatter.CallerPrettyfier = func(f *runtime.Frame) (string, string) {
 		filename := getRelativePath(f.File)
-		return "", filename + ":" + strconv.Itoa(f.Line)
+		if config.CFG.Debug {
+			return "", filename + ":" + strconv.Itoa(f.Line)
+		}
+		return "", ""
 	}
 	logger.SetFormatter(customFormatter)
 
