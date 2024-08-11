@@ -1,0 +1,15 @@
+[Unit]
+Description=GoKubeBalancer Service
+After=network.target
+
+[Service]
+EnvironmentFile=/opt/GoKubeBalancer/.env
+ExecStart=/opt/GoKubeBalancer/GoKubeBalancer
+WorkingDirectory=/opt/GoKubeBalancer
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=gokubebalancer
+
+[Install]
+WantedBy=multi-user.target
