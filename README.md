@@ -14,8 +14,14 @@ GoKubeBalancer is a load balancer application written in Go that distributes TCP
 - Run the following install script
 
 ```bash
-
+curl -s https://raw.githubusercontent.com/SupportTools/GoKubeBalancer/main/deploy/install.sh | bash
 ```
+
+NOTE: You will need to have the following settings:
+
+RANCHER_API - The Rancher API URL (e.g., <https://rancher.example.com>)
+RANCHER_KEY - The Rancher API key (e.g., token-12345:abncdefghijklmnopqrstuvwxyz....)
+RANCHER_CLUSTER - The Rancher cluster name (e.g., cluster1)
 
 ## Configuration
 
@@ -46,5 +52,5 @@ Contributions are welcome! Please follow the guidelines in the CONTRIBUTING.md f
 ## Contact
 
 For any questions or feedback, feel free to contact the project maintainer:
-Name: [Your Name]
-Email: [Your Email]
+Name: Matthew Mattox
+Email: [mmattox@support.tools](mailto:mmattox@support.tools)
