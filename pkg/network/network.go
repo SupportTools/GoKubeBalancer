@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/supporttools/GoKubeBalancer/pkg/backend"
 	"github.com/supporttools/GoKubeBalancer/pkg/logging"
@@ -18,6 +19,8 @@ type TCPBalancer struct {
 	frontendPort   int // Port to listen for incoming client connections
 	backendPort    int // Default port for connecting to the backend servers
 	backendManager *backend.BackendManager
+	pool           map[string][]net.Conn
+	poolMutex      sync.Mutex
 }
 
 // NewTCPBalancer creates a new instance of TCPBalancer with a BackendManager
@@ -26,6 +29,7 @@ func NewTCPBalancer(frontendPort int, backendPort int, bm *backend.BackendManage
 		frontendPort:   frontendPort,
 		backendPort:    backendPort,
 		backendManager: bm,
+		pool:           make(map[string][]net.Conn),
 	}
 }
 
@@ -51,11 +55,19 @@ func (tb *TCPBalancer) Start() {
 	}
 }
 
-// handleConnection manages a single client connection, routing it to an appropriate backend
 func (tb *TCPBalancer) handleConnection(clientConn net.Conn) {
 	defer clientConn.Close()
 	clientIP, _, _ := net.SplitHostPort(clientConn.RemoteAddr().String())
 
+	// Set a read timeout to detect if the connection is idle and should be closed
+	err := clientConn.SetReadDeadline(time.Now().Add(30 * time.Second)) // Adjust as needed
+	if err != nil {
+		log.Printf("[Connection] Failed to set read deadline for client %s: %v", clientIP, err)
+		return
+	}
+
+	// Acquire a connection from the pool or create a new one if not available
+	tb.poolMutex.Lock()
 	backendIP := tb.backendManager.GetBackendByIP(clientIP)
 	if backendIP == "" {
 		log.Printf("[Connection] No healthy backend available for client %s", clientIP)
@@ -67,47 +79,44 @@ func (tb *TCPBalancer) handleConnection(clientConn net.Conn) {
 		backendAddr = backendIP // Use the IP:Port directly if it's already formatted
 	}
 
-	backendConn, err := net.Dial("tcp", backendAddr)
-	if err != nil {
-		log.Printf("[Connection] Failed to connect to backend %s for client %s: %v", backendAddr, clientIP, err)
-		return
+	var backendConn net.Conn
+	if conn, ok := tb.pool[backendAddr]; ok && len(conn) > 0 {
+		backendConn = conn[0]
+		tb.pool[backendAddr] = conn[1:] // Remove the used connection from the pool
+	} else {
+		var err error
+		backendConn, err = net.Dial("tcp", backendAddr)
+		if err != nil {
+			log.Printf("[Connection] Failed to connect to backend %s for client %s: %v", backendAddr, clientIP, err)
+			return
+		}
 	}
-	defer backendConn.Close()
+	tb.poolMutex.Unlock()
 
+	// Use the acquired or newly created connection for data transfer
 	var wg sync.WaitGroup
 	wg.Add(2)
 
 	clientToBackendBytes := make(chan int64)
 	backendToClientBytes := make(chan int64)
-	errorChan := make(chan error, 2)
 
-	go func() {
-		defer wg.Done()
-		bytesCopied, err := io.Copy(backendConn, clientConn)
-		if err != nil {
-			errorChan <- err
-			log.Debugf("[Connection] Error while copying from client %s to backend %s: %v", clientIP, backendAddr, err)
-		}
-		clientToBackendBytes <- bytesCopied
-		backendConn.Close()
-	}()
+	go tb.copyAndClose(clientConn, backendConn, &wg, clientToBackendBytes)
+	go tb.copyAndClose(backendConn, clientConn, &wg, backendToClientBytes)
 
-	go func() {
-		defer wg.Done()
-		bytesCopied, err := io.Copy(clientConn, backendConn)
-		if err != nil {
-			errorChan <- err
-			log.Debugf("[Connection] Error while copying from backend %s to client %s: %v", backendAddr, clientIP, err)
-		}
-		backendToClientBytes <- bytesCopied
-		clientConn.Close()
-	}()
+	clientDataSize := <-clientToBackendBytes
+	backendDataSize := <-backendToClientBytes
 
-	clientToBackend := <-clientToBackendBytes
-	backendToClient := <-backendToClientBytes
+	log.Debugf("[Connection] Transfered %d bytes from client %s to backend and back", clientDataSize+backendDataSize, clientIP)
+}
 
-	log.Infof("[Connection] client=%s backend=%s port=%d client-to-backend=%dBytes backend-to-client=%dBytes total=%dBytes",
-		clientIP, backendIP, tb.backendPort, clientToBackend, backendToClient, clientToBackend+backendToClient)
-
-	wg.Wait()
+func (tb *TCPBalancer) copyAndClose(src net.Conn, dst net.Conn, wg *sync.WaitGroup, transferBytes chan<- int64) {
+	defer src.Close()
+	defer dst.Close()
+	bytesWritten, err := io.Copy(dst, src)
+	if err != nil {
+		log.Printf("[Connection] Failed to copy data between client and backend: %v", err)
+	} else {
+		transferBytes <- bytesWritten
+	}
+	wg.Done()
 }
