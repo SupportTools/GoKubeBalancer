@@ -11,9 +11,11 @@ GoKubeBalancer is a load balancer application written in Go that distributes TCP
 
 ## Installation
 
-To run the GoKubeBalancer application, you need Go installed on your system:
-bash
-go run main.go
+- Run the following install script
+
+```bash
+
+```
 
 ## Configuration
 
