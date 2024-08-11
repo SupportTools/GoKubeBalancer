@@ -1,0 +1,40 @@
+name: gokubebalancer
+base: core22
+version: "1.0.0"
+summary: GoKubeBalancer is a load balancer application written in Go
+description: |
+  GoKubeBalancer is a load balancer application written in Go that distributes TCP connections among backend servers. It is designed to provide efficient load distribution and failover capabilities for network applications. The application includes a metrics server for monitoring performance and health endpoints for status checks. It is designed to be deployed to integrate with Rancher to manage backend server configurations dynamically.
+  Features
+  - TCP load balancing for incoming client connections (Limited to port 80 and 443)
+  - Backend server management for routing client connections
+  - Monitoring of metrics and health endpoints for performance tracking
+  - Rancher integration for dynamic backend server configuration
+
+grade: devel
+confinement: classic
+
+architectures:
+  - amd64
+  - arm64
+  - s390x
+  - ppc64el
+  - armhf
+
+apps:
+  gokubebalancer:
+    command: bin/GoKubeBalancer
+    plugs:
+      - network
+      - network-bind
+    daemon: simple
+    restart-condition: always
+    environment:
+      LD_LIBRARY_PATH: /snap/core22/current/lib64
+      RANCHER_API: $RANCHER_API
+      RANCHER_KEY: $RANCHER_KEY
+      RANCHER_CLUSTER: $RANCHER_CLUSTER
+
+parts:
+  gokubebalancer:
+    plugin: go
+    source: .
