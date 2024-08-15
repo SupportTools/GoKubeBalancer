@@ -19,9 +19,9 @@ curl -s https://raw.githubusercontent.com/SupportTools/GoKubeBalancer/main/deplo
 
 NOTE: You will need to have the following settings:
 
-RANCHER_API - The Rancher API URL (e.g., <https://rancher.example.com>)
-RANCHER_KEY - The Rancher API key (e.g., token-12345:abncdefghijklmnopqrstuvwxyz....)
-RANCHER_CLUSTER - The Rancher cluster name (e.g., cluster1)
+- RANCHER_API - The Rancher API URL (e.g., <https://rancher.example.com>)
+- RANCHER_KEY - The Rancher API key (e.g., token-12345:abncdefghijklmnopqrstuvwxyz....)
+- RANCHER_CLUSTER - The Rancher cluster name (e.g., cluster1)
 
 ## Configuration
 
