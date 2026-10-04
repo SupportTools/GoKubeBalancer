@@ -21,12 +21,15 @@ jobs:
           # GOCACHE/GOMODCACHE already live on the runner's persistent shared /cache; setup-go's cache step only re-archives it (6-27 min on-prem).
           cache: false
 
+      # goreleaser v2.17.1 is baked into the self-hosted-linux runner image
+      # (SupportTools/ci-runners Dockerfile.arc2, taskforge-2671), so run it
+      # directly instead of downloading it per job via goreleaser-action
+      # (taskforge-2680, no job-time downloads).
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
         if: startsWith(github.ref, 'refs/tags/')
-        with:
-          version: '~> v2'
-          args: release --clean
+        run: |
+          goreleaser --version
+          goreleaser release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ github.ref_name }}
