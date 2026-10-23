@@ -59,18 +59,9 @@ jobs:
             --push \
             -f Dockerfile .
 
-      - name: Install Snapcraft
-        run: sudo snap install snapcraft --classic
-    
-      - name: Build Snap package
-        run: |
-          # Update the version in snapcraft.yaml
-          sed -i "s/version: '.*'/version: '${{ github.ref_name }}'/g" snapcraft.yaml
-          snapcraft pack
-
-      # - name: Publish Snap package
-      #   env:
-      #     SNAPCRAFT_LOGIN: ${{ secrets.SNAPCRAFT_LOGIN }}
-      #   run: |
-      #     snapcraft login --with $SNAPCRAFT_LOGIN
-      #     snapcraft upload gokubebalancer_*.snap --release=edge            
+      # The snap build that used to follow was removed: the self-hosted-linux
+      # ARC runners have no snapd (`sudo: snap: command not found`), snapcraft
+      # ships only as a snap, its output was never published or uploaded, and
+      # its `sed -i ... snapcraft.yaml` targeted a root file that never existed
+      # (the manifest is snap/snapcraft.yaml). Restore it on a snap-capable
+      # runner if the snap is ever published.
